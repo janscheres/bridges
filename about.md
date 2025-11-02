@@ -2,13 +2,13 @@
 
 Data's Journey is a command-line tool that visualizes the flow of data through a simulated computer system. Here is a step-by-step breakdown of the data's journey:
 
-1.  **Keyboard to RAM**: The user enters a string, which is loaded into RAM.
-2.  **RAM to CPU to GPU**: The data is sent from RAM to the CPU for processing (converted to uppercase) and then to the GPU.
-3.  **GPU to RAM to SSD**: The processed data is sent back to RAM and then written to a simulated SSD (`fromssd.txt`).
-4.  **SSD to RAM**: The data is read from the SSD back into RAM.
-5.  **RAM to Environment Variable**: The data is stored in an environment variable (`DATA_TO_LOG`).
-6.  **Environment Variable to RAM**: The data is read from the environment variable back into RAM.
-7.  **RAM to NIC to Display**: The data is sent through a simulated network interface and then displayed as a QR code.
+1.  **Keyboard to RAM**: The user enters a string so its stored in the keyboard buffer and then it is written to RAM
+2. **RAM TO CPU** The string is processed (convert to upper case), transferring it to the CPU
+3. **CPU TO GPU** The string is then written to GPU VRAM
+4.  **GPU (to RAM) to SSD**: This is sent back to RAM and then written to a file in SSD
+5.  **SSD (to RAM) to Environment Variable**: The data is read from the SSD back into RAM and stored in an environment varianle.
+6.  **Environment Variable (to RAM) to NIC**: The data is read from the environment variable back into RAM and goes through the Network Card buffer through a TCP packet.
+7.  **NIC Buffer to RAM to Display**: The TCP packet is read from the buffer back into RAM and then is displayed in the form of a QR code.
 
 At each step, the tool prints a detailed log to the console, including the data, its memory address, and a SHA256 hash to verify its integrity.
 
