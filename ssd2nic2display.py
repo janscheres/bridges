@@ -6,48 +6,33 @@ import threading
 import time
 import sys
 import subprocess
-from PIL import Image, ImageDraw
+from PIL import Image
+import qrcode
+
+import hashlib
 
 SSD_FILE_PATH = os.path.abspath("fromssd.txt")
 HOST = '127.0.0.1'
 PORT = 8081
-IMAGE_FILE = "/tmp/pixel_display.png"
+IMAGE_FILE = "/tmp/qrcode_display.png"
+NIC_BUFFER_FILE = "/tmp/nic_buffer.txt"
 
-def display_string_as_pixels(final_data_string):
+def display_string_as_qrcode(final_data_string):
     sanitized_string = final_data_string.strip()
     
     if not sanitized_string:
         return
 
-    PIXEL_BLOCK_SIZE = 10
-    NUM_COMPONENTS_PER_CHAR = 3
-    
-    img_width = len(sanitized_string) * NUM_COMPONENTS_PER_CHAR * PIXEL_BLOCK_SIZE
-    img_height = PIXEL_BLOCK_SIZE
-    
-    img = Image.new('RGB', (img_width, img_height), color='black')
-    draw = ImageDraw.Draw(img)
-    
-    x_offset = 0
-    
-    for i, char in enumerate(sanitized_string):
-        ascii_val = ord(char)
-        
-        color_r = (ascii_val, 50, 50)
-        x_start_r, x_end_r = x_offset, x_offset + PIXEL_BLOCK_SIZE
-        draw.rectangle([x_start_r, 0, x_end_r, img_height], fill=color_r)
-        
-        g_val_index = (i * 30) % 256
-        color_g = (50, g_val_index, 50)
-        x_start_g, x_end_g = x_end_r, x_end_r + PIXEL_BLOCK_SIZE
-        draw.rectangle([x_start_g, 0, x_end_g, img_height], fill=color_g)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(sanitized_string)
+    qr.make(fit=True)
 
-        color_b = (50, 50, 150)
-        x_start_b, x_end_b = x_end_g, x_end_g + PIXEL_BLOCK_SIZE
-        draw.rectangle([x_start_b, 0, x_end_b, img_height], fill=color_b)
-        
-        x_offset = x_end_b
-
+    img = qr.make_image(fill_color="black", back_color="white")
     img.save(IMAGE_FILE)
     
     try:
@@ -68,7 +53,8 @@ def receiver_thread():
                 socket_received_bytes = conn.recv(1024)
                 if socket_received_bytes:
                     received_string = socket_received_bytes.decode()
-                    display_string_as_pixels(received_string)
+                    print(f"Display: Receiving '{received_string.strip()}' from NIC (SHA256: {hashlib.sha256(received_string.encode()).hexdigest()}). Generating QR code.")
+                    display_string_as_qrcode(received_string)
         except socket.timeout:
             print("Receiver timeout.")
         except Exception as e:
@@ -78,16 +64,32 @@ def sender_main(file_path):
     try:
         with open(file_path, 'r') as f:
             string_to_send = f.read()
+        print(f"SSD: Reading '{string_to_send.strip()}' to RAM (Address: {hex(id(string_to_send))}, SHA256: {hashlib.sha256(string_to_send.encode()).hexdigest()}).")
     except FileNotFoundError:
         print(f"File not found: {file_path}")
         return
 
+    os.environ["DATA_TO_LOG"] = string_to_send
+    print(f"RAM (Address: {hex(id(string_to_send))}): Writing '{string_to_send.strip()}' to Environment Variable (DATA_TO_LOG).")
+
+    data_from_env = os.environ["DATA_TO_LOG"]
+    print(f"Environment Variable: Reading '{data_from_env.strip()}' to RAM (Address: {hex(id(data_from_env))}, SHA256: {hashlib.sha256(data_from_env.encode()).hexdigest()}).")
+
+    with open(NIC_BUFFER_FILE, "w") as f:
+        f.write(data_from_env)
+    print(f"RAM (Address: {hex(id(data_from_env))}): Writing '{data_from_env.strip()}' to NIC Buffer ({NIC_BUFFER_FILE}).")
+
+    with open(NIC_BUFFER_FILE, "r") as f:
+        string_from_buffer = f.read()
+    print(f"NIC Buffer: Reading '{string_from_buffer.strip()}' to RAM (Address: {hex(id(string_from_buffer))}, SHA256: {hashlib.sha256(string_from_buffer.encode()).hexdigest()}).")
+
     time.sleep(0.5)
 
     try:
+        print(f"RAM (Address: {hex(id(string_from_buffer))}): Sending '{string_from_buffer.strip()}' to NIC.")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
-            s.sendall(string_to_send.encode('utf-8'))
+            s.sendall(string_from_buffer.encode('utf-8'))
     except ConnectionRefusedError:
         print("Connection refused.")
     except Exception as e:
