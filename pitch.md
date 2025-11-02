@@ -1,0 +1,26 @@
+Project Title: DataBridges
+Tagline: Storing and transferring data where and how you shouldn't.
+
+Elevator Pitch:
+"Ever wondered how your data travels through your computer? Data's Journey is a visualization tool that demystifies the complex inner workings of your machine. We trace a simple string from your keyboard through the CPU, GPU, RAM, and SSD, and even through software components like environment variables and file system buffers. With SHA256 hashing at each step to prove data integrity and a final QR code representation, Data's Journey makes the invisible visible and provides a unique and educational look into the world of data flow."
+
+Inspiration:
+"The inspiration behind Data's Journey stemmed from a curiosity to understand the intricate dance of data within a computer system. We often interact with high-level applications, but the underlying processes—how data moves from one component to another, gets transformed, and eventually presented—remain largely opaque. We wanted to pull back the curtain and make this fascinating journey tangible and comprehensible, not just for seasoned developers but for anyone curious about what happens 'under the hood'."
+
+What it does:
+"Data's Journey takes a user-input string and meticulously tracks its progression through a simulated computer architecture. The data begins its life in RAM, is processed by the CPU and GPU, then written to a simulated SSD. From there, it navigates through various software 'bridges' including an environment variable and a file system buffer, before being sent across a simulated network interface. Finally, the data is received and rendered as a QR code on the display. At each significant transfer point, the project outputs detailed console logs, including the data's content, its memory address (in RAM), and a SHA256 hash to verify its integrity, providing a transparent and verifiable audit trail of its journey."
+
+How we built it:
+"Data's Journey was built primarily using Python, leveraging its simplicity for scripting and its rich ecosystem for various functionalities. We utilized `subprocess` calls to simulate interactions between different hardware components like the CPU and GPU (represented by a C program). File I/O operations were used to mimic data persistence on an SSD and to create a file system buffer. Environment variables were employed to demonstrate another method of inter-process data transfer. The `qrcode` library was instrumental in generating the final visual output, and `hashlib` provided the cryptographic proof of data integrity at each stage. The entire flow is orchestrated through a series of interconnected Python scripts, each representing a 'bridge' in the data's journey."
+
+Challenges we ran into:
+"One of the primary challenges was accurately simulating the various stages of data transfer and processing in a way that was both illustrative and technically sound, without over-complicating the codebase. Ensuring data integrity across different mediums (RAM, file system, environment variables) required careful implementation of hashing. Initially, we explored using actual named pipes (FIFOs) for inter-process communication, but encountered blocking issues that led us to a simpler file-based simulation for clarity and stability within a single-process demonstration. Integrating `tcpdump` for network traffic proof also presented challenges due to permissions and timing, leading us to suggest external execution for better reliability."
+
+Accomplishments that we're proud of:
+"We are particularly proud of creating a clear and engaging visualization of an otherwise abstract concept. The integration of SHA256 hashing at every step provides a robust and verifiable 'proof' of data integrity, which is a core accomplishment. The seamless transition of data through diverse 'places'—from hardware simulations to software constructs like environment variables—demonstrates a comprehensive understanding of data flow. The final QR code output serves as an elegant and functional representation of the data's complete journey."
+
+What we learned:
+"This project reinforced our understanding of computer architecture and the nuances of data handling across different layers of a system. We gained deeper insights into inter-process communication mechanisms, the importance of data integrity, and the practical application of cryptographic hashing. Furthermore, we learned valuable lessons in debugging complex multi-component systems and adapting our technical approach when faced with unexpected challenges, such as the FIFO blocking behavior."
+
+What's next for Data's Journey:
+"For future iterations, we envision enhancing Data's Journey with a more interactive graphical user interface that visually animates the data's path. We'd also like to explore integrating more 'funky' data destinations, such as message queues or even a distributed ledger, to showcase a wider array of data persistence and transfer mechanisms. Further refinement of the network simulation to include more detailed packet information would also be a valuable addition."
