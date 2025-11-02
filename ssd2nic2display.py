@@ -40,26 +40,6 @@ def display_string_as_qrcode(final_data_string):
     except FileNotFoundError:
         print("Could not open image. 'xdg-open' command not found.")
 
-def receiver_thread():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((HOST, PORT))
-        s.listen(1)
-        s.settimeout(5)
-
-        try:
-            conn, addr = s.accept()
-            with conn:
-                socket_received_bytes = conn.recv(1024)
-                if socket_received_bytes:
-                    received_string = socket_received_bytes.decode()
-                    print(f"Display: Receiving '{received_string.strip()}' from NIC (SHA256: {hashlib.sha256(received_string.encode()).hexdigest()}). Generating QR code.")
-                    display_string_as_qrcode(received_string)
-        except socket.timeout:
-            print("Receiver timeout.")
-        except Exception as e:
-            print(f"Receiver error: {e}")
-
 def sender_main(file_path):
     try:
         with open(file_path, 'r') as f:
@@ -85,17 +65,63 @@ def sender_main(file_path):
     decoded_string = base64.b64decode(data_from_env_encoded).decode()
     print(f"Environment Variable: Reading '{data_from_env_encoded}' and decoding to '{decoded_string.strip()}' in RAM (Address: {hex(id(decoded_string))}, SHA256: {hashlib.sha256(decoded_string.encode()).hexdigest()}).")
 
+    # Simulate Packet Loss and Reordering
+    packets = []
+    for i, char in enumerate(decoded_string):
+        packets.append(f"{i}:{char}")
+    
+    random.shuffle(packets)
+    if random.random() < 0.5: # 50% chance of packet loss
+        dropped_packet_index = random.randint(0, len(packets) - 1)
+        print(f"!!! NIC Simulation: Dropping packet {packets[dropped_packet_index]} !!!")
+        packets.pop(dropped_packet_index)
+
     time.sleep(0.5)
 
     try:
-        print(f"RAM (Address: {hex(id(decoded_string))}): Sending '{decoded_string.strip()}' to NIC.")
+        print(f"RAM (Address: {hex(id(decoded_string))}): Sending packets to NIC: {packets}")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
-            s.sendall(decoded_string.encode('utf-8'))
+            s.sendall("\n".join(packets).encode('utf-8'))
     except ConnectionRefusedError:
         print("Connection refused.")
     except Exception as e:
         print(f"Sender error: {e}")
+
+def receiver_thread():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((HOST, PORT))
+        s.listen(1)
+        s.settimeout(5)
+
+        try:
+            conn, addr = s.accept()
+            with conn:
+                data = conn.recv(1024).decode('utf-8')
+                packets = data.split('\n')
+                print(f"Display: Receiving packets from NIC: {packets}")
+
+                # Reassemble packets
+                reassembled_string = ""
+                received_packets = {}
+                for packet in packets:
+                    if ':' in packet:
+                        seq, char = packet.split(':', 1)
+                        received_packets[int(seq)] = char
+                
+                for i in range(len(packets) + 1):
+                    if i in received_packets:
+                        reassembled_string += received_packets[i]
+                    else:
+                        reassembled_string += "_" # Indicate missing packet
+
+                print(f"Display: Reassembled string: '{reassembled_string.strip()}' (SHA256: {hashlib.sha256(reassembled_string.encode()).hexdigest()}). Generating QR code.")
+                display_string_as_qrcode(reassembled_string)
+        except socket.timeout:
+            print("Receiver timeout.")
+        except Exception as e:
+            print(f"Receiver error: {e}")
 
 if __name__ == "__main__":
     receiver = threading.Thread(target=receiver_thread)
