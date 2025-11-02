@@ -8,8 +8,9 @@ import sys
 import subprocess
 from PIL import Image
 import qrcode
-
 import hashlib
+import random
+import base64
 
 SSD_FILE_PATH = os.path.abspath("fromssd.txt")
 HOST = '127.0.0.1'
@@ -68,19 +69,29 @@ def sender_main(file_path):
         print(f"File not found: {file_path}")
         return
 
-    os.environ["DATA_TO_LOG"] = string_to_send
-    print(f"RAM (Address: {hex(id(string_to_send))}): Writing '{string_to_send.strip()}' to Environment Variable (DATA_TO_LOG).")
+    # Simulate SSD Wear and Tear
+    if random.random() < 0.5: # 50% chance of corruption
+        char_index_to_corrupt = random.randint(0, len(string_to_send) - 2)
+        bit_to_flip = 1 << random.randint(0, 7)
+        corrupted_char = ord(string_to_send[char_index_to_corrupt]) ^ bit_to_flip
+        string_to_send = string_to_send[:char_index_to_corrupt] + chr(corrupted_char) + string_to_send[char_index_to_corrupt+1:]
+        print(f"!!! SSD Wear and Tear Simulation: Flipped a bit in the data. New data: '{string_to_send.strip()}' (SHA256: {hashlib.sha256(string_to_send.encode()).hexdigest()}) !!!")
 
-    data_from_env = os.environ["DATA_TO_LOG"]
-    print(f"Environment Variable: Reading '{data_from_env.strip()}' to RAM (Address: {hex(id(data_from_env))}, SHA256: {hashlib.sha256(data_from_env.encode()).hexdigest()}).")
+    encoded_string = base64.b64encode(string_to_send.encode()).decode()
+    os.environ["DATA_TO_LOG"] = encoded_string
+    print(f"RAM (Address: {hex(id(string_to_send))}): Writing '{encoded_string}' (Base64 encoded) to Environment Variable (DATA_TO_LOG).")
+
+    data_from_env_encoded = os.environ["DATA_TO_LOG"]
+    decoded_string = base64.b64decode(data_from_env_encoded).decode()
+    print(f"Environment Variable: Reading '{data_from_env_encoded}' and decoding to '{decoded_string.strip()}' in RAM (Address: {hex(id(decoded_string))}, SHA256: {hashlib.sha256(decoded_string.encode()).hexdigest()}).")
 
     time.sleep(0.5)
 
     try:
-        print(f"RAM (Address: {hex(id(data_from_env))}): Sending '{data_from_env.strip()}' to NIC.")
+        print(f"RAM (Address: {hex(id(decoded_string))}): Sending '{decoded_string.strip()}' to NIC.")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
-            s.sendall(data_from_env.encode('utf-8'))
+            s.sendall(decoded_string.encode('utf-8'))
     except ConnectionRefusedError:
         print("Connection refused.")
     except Exception as e:
