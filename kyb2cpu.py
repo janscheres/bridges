@@ -5,6 +5,9 @@ import hashlib
 
 def main():
     try:
+        print("--- Compiling cpu2gpu program ---")
+        subprocess.run(["./compilecpu2gpu.sh"], check=True)
+
         raw_input_string = input("Enter a string: ")
         print(f"Keyboard: Input '{raw_input_string}' to RAM (Address: {hex(id(raw_input_string))}, SHA256: {hashlib.sha256(raw_input_string.encode()).hexdigest()}).")
         input("Press Enter to continue...")
@@ -36,6 +39,9 @@ def main():
                 input("Press Enter to continue...")
 
                 subprocess.run(["python3", "ssd2nic2display.py"])
+
+                print("\n--- Running cleanup script ---")
+                subprocess.run(["./cleanup.sh"])
 
     except Exception as e:
         print(f"An error occurred: {e}")
